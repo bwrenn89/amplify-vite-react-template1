@@ -7,11 +7,44 @@ specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
 const schema = a.schema({
+  Organization: a
+    .model({
+      name: a.string(),
+      description: a.string().required(false),
+      members: a.hasMany('User'),
+      todos: a.hasMany('Todo')
+    })
+    .authorization([
+      // Allow organization owners full access
+      a.allow.owner(),
+      // Allow organization members to read
+      a.allow.public().read()
+    ]),
+
+  User: a
+    .model({
+      email: a.string(),
+      organizations: a.manyToMany('Organization', 'UserOrganizations'),
+      todos: a.hasMany('Todo')
+    })
+    .authorization([
+      a.allow.owner(),
+      a.allow.public().read()
+    ]),
+
   Todo: a
     .model({
       content: a.string(),
-    }).authorization(allow => [allow.owner()]),
-    });
+      isDone: a.boolean(),
+      organization: a.belongsTo('Organization'),
+      assignedTo: a.belongsTo('User')
+    })
+    .authorization([
+      // Allow organization members to access todos
+      a.allow.owner(),
+      a.allow.public().read()
+    ]),
+});
 
 export type Schema = ClientSchema<typeof schema>;
 
@@ -19,13 +52,13 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: 'userPool',
-    },
+  },
 });
 
 /*== STEP 2 ===============================================================
 Go to your frontend source code. From your client-side code, generate a
 Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
+WORK IN THE FRONTEND CODE.)
 
 Using JavaScript or Next.js React Server Components, Middleware, Server 
 Actions or Pages Router? Review how to generate Data clients for those use
